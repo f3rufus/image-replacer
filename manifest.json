@@ -1,34 +1,39 @@
 {
   "manifest_version": 2,
   "name": "Image Replacer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Replace images on pages with your own",
+
   "browser_specific_settings": {
     "gecko": {
       "id": "image-replacer@myreplacement.local",
       "strict_min_version": "58.0",
       "data_collection_permissions": {
-  	"required": ["none"],
-  	"optional": []
-	}
+        "required": ["none"],
+        "optional": []
+      }
     }
   },
+
   "permissions": [
     "activeTab",
     "storage",
     "contextMenus",
     "<all_urls>"
   ],
+
   "icons": {
     "48": "icons/icon48.png",
     "96": "icons/icon96.png"
   },
+
   "browser_action": {
     "default_popup": "popup.html",
     "default_icon": {
       "48": "icons/icon48.png"
     }
   },
+
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -37,6 +42,7 @@
       "run_at": "document_end"
     }
   ],
+
   "background": {
     "scripts": ["background.js"],
     "persistent": false

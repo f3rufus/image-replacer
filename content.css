@@ -6,28 +6,21 @@
   background: #1a1a2e;
   border: 1px solid #e94560;
   border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(233, 69, 96, 0.2);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(233,69,96,0.2);
   font-family: 'Segoe UI', system-ui, sans-serif;
   font-size: 13px;
   color: #e0e0e0;
   overflow: hidden;
-  /* Smooth appearance */
+  /* Плавное появление */
   animation: ir-appear 0.18s ease;
 }
 
 @keyframes ir-appear {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* On mobile, the panel is fixed at the bottom, so I'll add rounding only at the top */
+/* На мобиле панель фиксирована снизу — добавим скругление только сверху */
 .ir-panel[style*="fixed"] {
   border-radius: 14px 14px 10px 10px;
   width: min(340px, calc(100vw - 24px));
@@ -38,8 +31,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 12px;
-  background: rgba(233, 69, 96, 0.12);
-  border-bottom: 1px solid rgba(233, 69, 96, 0.25);
+  background: rgba(233,69,96,0.12);
+  border-bottom: 1px solid rgba(233,69,96,0.25);
 }
 
 .ir-panel-title {
@@ -57,25 +50,22 @@
   padding: 2px 4px;
   line-height: 1;
   transition: color 0.15s;
-  /* Increasing the touch area for mobile */
+  /* Увеличиваем область касания для мобиля */
   min-width: 28px;
   min-height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
-.ir-close:hover {
-  color: #e94560;
-}
+.ir-close:hover { color: #e94560; }
 
 .ir-panel-src {
   padding: 7px 12px;
   font-size: 11px;
   color: #888;
   font-family: monospace;
-  background: rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0,0,0,0.3);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -83,7 +73,7 @@
 
 .ir-tabs {
   display: flex;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .ir-tab {
@@ -98,16 +88,11 @@
   transition: all 0.15s;
   border-bottom: 2px solid transparent;
 }
-
-.ir-tab:hover {
-  color: #ccc;
-  background: rgba(255, 255, 255, 0.04);
-}
-
+.ir-tab:hover { color: #ccc; background: rgba(255,255,255,0.04); }
 .ir-tab-active {
   color: #e94560 !important;
   border-bottom-color: #e94560;
-  background: rgba(233, 69, 96, 0.06);
+  background: rgba(233,69,96,0.06);
 }
 
 .ir-tab-content {
@@ -116,40 +101,31 @@
   flex-direction: column;
   gap: 8px;
 }
-
-.ir-hidden {
-  display: none !important;
-}
+.ir-hidden { display: none !important; }
 
 .ir-input {
   width: 100%;
   box-sizing: border-box;
   padding: 9px 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 6px;
   color: #e0e0e0;
   font-size: 13px;
   font-family: inherit;
   outline: none;
   transition: border-color 0.15s;
-  /* Important for mobile - do not zoom while focusing */
+  /* Важно для мобильного — не зумить при фокусе */
   font-size: max(16px, 13px);
 }
-
-.ir-input:focus {
-  border-color: #e94560;
-}
-
-.ir-input::placeholder {
-  color: #555;
-}
+.ir-input:focus { border-color: #e94560; }
+.ir-input::placeholder { color: #555; }
 
 .ir-file-label {
   display: block;
   padding: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(255,255,255,0.06);
+  border: 1px dashed rgba(255,255,255,0.2);
   border-radius: 6px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
@@ -157,17 +133,12 @@
   font-size: 13px;
   color: #aaa;
 }
-
-.ir-file-label:hover,
-.ir-file-label:active {
+.ir-file-label:hover, .ir-file-label:active {
   border-color: #e94560;
-  background: rgba(233, 69, 96, 0.08);
+  background: rgba(233,69,96,0.08);
   color: #fff;
 }
-
-.ir-file-label input[type="file"] {
-  display: none;
-}
+.ir-file-label input[type="file"] { display: none; }
 
 .ir-btn-primary {
   padding: 10px 14px;
@@ -183,15 +154,8 @@
   align-self: stretch;
   text-align: center;
 }
-
-.ir-btn-primary:hover {
-  background: #ff5c74;
-}
-
-.ir-btn-primary:active {
-  transform: scale(0.97);
-  background: #c73350;
-}
+.ir-btn-primary:hover { background: #ff5c74; }
+.ir-btn-primary:active { transform: scale(0.97); background: #c73350; }
 
 /* Toast */
 .ir-toast {
@@ -212,7 +176,6 @@
   pointer-events: none;
   white-space: nowrap;
 }
-
 .ir-toast-show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);

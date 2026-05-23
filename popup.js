@@ -11,7 +11,7 @@ browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
   }
 });
 
-// ─── Вкладки ─────────────────────────────────────────────────────────────────
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -53,19 +53,19 @@ function emptyState(icon, text) {
   ]);
 }
 
-// ─── Правила для текущей страницы ────────────────────────────────────────────
+// ─── This page rules ──────────────────────────────────────────────────────────
 
 function renderPageRules() {
   if (!currentPageUrl) return;
   browser.runtime.sendMessage({ type: 'GET_RULES', pageUrl: currentPageUrl }).then(response => {
-    const rules = response.rules || {};
+    const rules    = response.rules || {};
     const container = document.getElementById('page-rules-list');
     const clearBtn  = document.getElementById('clear-page-btn');
     container.textContent = '';
 
     const entries = Object.entries(rules);
     if (entries.length === 0) {
-      container.appendChild(emptyState('🖼', 'No rules for this page. Click any image on the page to set up a replacement.'));
+      container.appendChild(emptyState('🖼', 'No rules for this page. Right-click any image (desktop) or long-press it (mobile) to set up a replacement.'));
       clearBtn.style.display = 'none';
       return;
     }
@@ -77,7 +77,6 @@ function renderPageRules() {
         ? '...' + originalSrc.slice(-52)
         : originalSrc;
 
-      // Images
       const imgBefore = el('img', { src: originalSrc, alt: '' });
       imgBefore.onerror = () => { imgBefore.style.opacity = '0.2'; };
 
@@ -94,7 +93,6 @@ function renderPageRules() {
       ]);
       const images = el('div', { className: 'rule-images' }, [wrapBefore, wrapAfter]);
 
-      // Delete button
       const delBtn = el('button', { className: 'rule-del', textContent: 'Delete' });
       delBtn.addEventListener('click', () => {
         browser.runtime.sendMessage({
@@ -114,7 +112,7 @@ function renderPageRules() {
   });
 }
 
-// ─── Все правила ──────────────────────────────────────────────────────────────
+// ─── All rules ────────────────────────────────────────────────────────────────
 
 function renderAllRules() {
   browser.runtime.sendMessage({ type: 'GET_ALL_RULES' }).then(response => {
@@ -124,7 +122,7 @@ function renderAllRules() {
 
     const pages = Object.entries(allRules);
     if (pages.length === 0) {
-      container.appendChild(emptyState('📋', 'No rules yet. Start by clicking an image on any site.'));
+      container.appendChild(emptyState('📋', 'No rules yet. Start by right-clicking an image on any site.'));
       return;
     }
 
@@ -168,7 +166,7 @@ function renderAllRules() {
   });
 }
 
-// ─── Кнопка "удалить все правила страницы" ────────────────────────────────────
+// ─── Clear page button ────────────────────────────────────────────────────────
 
 document.getElementById('clear-page-btn').addEventListener('click', () => {
   if (!currentPageUrl) return;
@@ -178,7 +176,7 @@ document.getElementById('clear-page-btn').addEventListener('click', () => {
   });
 });
 
-// ─── Уведомляем контент-скрипт текущей вкладки ───────────────────────────────
+// ─── Notify content script ────────────────────────────────────────────────────
 
 function notifyTab() {
   browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {

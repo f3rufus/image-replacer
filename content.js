@@ -3,7 +3,7 @@
 const pageUrl = window.location.href;
 let activePanel = null;
 
-// ─── 1. Применяем сохранённые правила при загрузке ───────────────────────────
+// ─── 1. Apply saved rules on load ────────────────────────────────────────────
 
 function applyRules(rules) {
   if (!rules || Object.keys(rules).length === 0) return;
@@ -49,7 +49,7 @@ browser.runtime.sendMessage({ type: 'GET_RULES', pageUrl }).then(response => {
   observeNewImages(response.rules);
 });
 
-// ─── 2. Панель замены ─────────────────────────────────────────────────────────
+// ─── 2. Replacement panel ─────────────────────────────────────────────────────
 
 function closePanel() {
   if (activePanel) { activePanel.remove(); activePanel = null; }
@@ -69,7 +69,6 @@ function el(tag, props = {}, children = []) {
     else if (k === 'placeholder') node.placeholder = v;
     else if (k === 'accept') node.accept = v;
     else if (k === 'id') node.id = v;
-    else if (k === 'htmlFor') node.htmlFor = v;
     else if (k.startsWith('data-')) node.dataset[k.slice(5)] = v;
     else node.setAttribute(k, v);
   }
@@ -86,36 +85,30 @@ function showPanelForSrc(originalSrc, anchorEl) {
     ? '...' + originalSrc.slice(-57)
     : originalSrc;
 
-  // Header
   const closeBtn = el('button', { className: 'ir-close', textContent: '✕' });
   const header = el('div', { className: 'ir-panel-header' }, [
-    el('span', { className: 'ir-panel-title', textContent: '🔄 Заменить изображение' }),
+    el('span', { className: 'ir-panel-title', textContent: '🔄 Replace image' }),
     closeBtn
   ]);
 
-  // Src label
   const srcLabel = el('div', { className: 'ir-panel-src', title: originalSrc, textContent: shortSrc });
 
-  // Tabs
-  const tabUrl  = el('button', { className: 'ir-tab ir-tab-active', 'data-tab': 'url', textContent: 'По URL' });
-  const tabFile = el('button', { className: 'ir-tab', 'data-tab': 'file', textContent: 'Файл с устройства' });
+  const tabUrl  = el('button', { className: 'ir-tab ir-tab-active', 'data-tab': 'url', textContent: 'By URL' });
+  const tabFile = el('button', { className: 'ir-tab', 'data-tab': 'file', textContent: 'Local file' });
   const tabs    = el('div', { className: 'ir-tabs' }, [tabUrl, tabFile]);
 
-  // Tab: URL
   const urlInput  = el('input', { className: 'ir-input', id: 'ir-url-input', type: 'url', placeholder: 'https://example.com/image.jpg' });
-  const urlBtn    = el('button', { className: 'ir-btn-primary', id: 'ir-btn-url', textContent: 'Применить' });
+  const urlBtn    = el('button', { className: 'ir-btn-primary', id: 'ir-btn-url', textContent: 'Apply' });
   const tabUrlDiv = el('div', { className: 'ir-tab-content', id: 'ir-tab-url' }, [urlInput, urlBtn]);
 
-  // Tab: File
-  const fileInput   = el('input', { type: 'file', id: 'ir-file-input', accept: 'image/*' });
-  const fileName    = el('span', { id: 'ir-file-name', textContent: 'Выбрать файл…' });
-  const fileLabel   = el('label', { className: 'ir-file-label' }, [fileInput, fileName]);
-  const fileBtn     = el('button', { className: 'ir-btn-primary', id: 'ir-btn-file', textContent: 'Применить' });
-  const tabFileDiv  = el('div', { className: 'ir-tab-content ir-hidden', id: 'ir-tab-file' }, [fileLabel, fileBtn]);
+  const fileInput  = el('input', { type: 'file', id: 'ir-file-input', accept: 'image/*' });
+  const fileName   = el('span', { id: 'ir-file-name', textContent: 'Choose file…' });
+  const fileLabel  = el('label', { className: 'ir-file-label' }, [fileInput, fileName]);
+  const fileBtn    = el('button', { className: 'ir-btn-primary', id: 'ir-btn-file', textContent: 'Apply' });
+  const tabFileDiv = el('div', { className: 'ir-tab-content ir-hidden', id: 'ir-tab-file' }, [fileLabel, fileBtn]);
 
   const panel = el('div', { className: 'ir-panel' }, [header, srcLabel, tabs, tabUrlDiv, tabFileDiv]);
 
-  // Позиционирование
   if (anchorEl) {
     const rect = anchorEl.getBoundingClientRect();
     panel.style.position = 'absolute';
@@ -138,7 +131,6 @@ function showPanelForSrc(originalSrc, anchorEl) {
     }
   }
 
-  // Вкладки
   [tabUrl, tabFile].forEach(tab => {
     tab.addEventListener('click', () => {
       [tabUrl, tabFile].forEach(t => t.classList.remove('ir-tab-active'));
@@ -179,12 +171,12 @@ function saveAndApply(originalSrc, newSrc) {
   browser.runtime.sendMessage({
     type: 'SAVE_RULE', pageUrl, originalSrc, replacementSrc: newSrc
   }).then(() => {
-    showToast('✓ Замена сохранена');
+    showToast('✓ Replacement saved');
     closePanel();
   });
 }
 
-// ─── 3. Десктоп: контекстное меню → сообщение от background.js ───────────────
+// ─── 3. Desktop: context menu → message from background.js ───────────────────
 
 browser.runtime.onMessage.addListener(message => {
   if (message.type === 'SHOW_PANEL_FOR') {
@@ -205,8 +197,9 @@ browser.runtime.onMessage.addListener(message => {
   }
 });
 
-// ─── 4. Мобиль: long press на картинку (500мс) ───────────────────────────────
+// ─── 4. Mobile: long press (300ms) ───────────────────────────────────────────
 
+const LONG_PRESS_MS = 300;
 let longPressTimer = null;
 let longPressMoved = false;
 
@@ -219,7 +212,7 @@ document.addEventListener('touchstart', e => {
       e.preventDefault();
       showPanelForSrc(getOriginalSrc(img), img);
     }
-  }, 500);
+  }, LONG_PRESS_MS);
 }, { passive: false });
 
 document.addEventListener('touchmove', () => {
@@ -231,7 +224,7 @@ document.addEventListener('touchend', () => {
   clearTimeout(longPressTimer);
 }, { passive: true });
 
-// ─── 5. Закрытие панели по клику вне неё ─────────────────────────────────────
+// ─── 5. Close panel on outside click/touch ───────────────────────────────────
 
 document.addEventListener('click', e => {
   if (activePanel && !activePanel.contains(e.target)) closePanel();

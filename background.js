@@ -1,9 +1,9 @@
 // background.js
 
-// Register a context menu item (desktop only – silently ignored on mobile)
+// Регистрируем пункт контекстного меню (только десктоп — на мобиле тихо игнорируется)
 browser.contextMenus.create({
   id: 'replace-image',
-  title: '🔄 Replace image',
+  title: '🔄 Заменить изображение',
   contexts: ['image']
 });
 
@@ -16,7 +16,7 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-// ─── Rules repository ─────────────────────────────────────────────────────────
+// ─── Хранилище правил ─────────────────────────────────────────────────────────
 
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_RULES') {
