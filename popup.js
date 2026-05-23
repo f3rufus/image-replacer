@@ -2,7 +2,6 @@
 
 let currentPageUrl = null;
 
-// Get the URL of the current tab
 browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
   if (tabs[0]) {
     currentPageUrl = tabs[0].url;
@@ -12,7 +11,7 @@ browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
   }
 });
 
-// ─── Tabs ─────────────────────────────────────────────────────────────────
+// ─── Вкладки ─────────────────────────────────────────────────────────────────
 
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -20,30 +19,53 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-
     if (tab.dataset.tab === 'all') renderAllRules();
     if (tab.dataset.tab === 'page') renderPageRules();
   });
 });
 
-// ─── Rules for the current page ────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'className') node.className = v;
+    else if (k === 'textContent') node.textContent = v;
+    else if (k === 'title') node.title = v;
+    else if (k === 'src') node.src = v;
+    else if (k === 'alt') node.alt = v;
+    else if (k === 'style') node.style.cssText = v;
+    else if (k.startsWith('data-')) node.dataset[k.slice(5)] = v;
+    else node.setAttribute(k, v);
+  }
+  children.forEach(c => c && node.appendChild(
+    typeof c === 'string' ? document.createTextNode(c) : c
+  ));
+  return node;
+}
+
+function emptyState(icon, text) {
+  const p = document.createElement('p');
+  p.textContent = text;
+  return el('div', { className: 'empty-state' }, [
+    el('div', { className: 'icon', textContent: icon }),
+    p
+  ]);
+}
+
+// ─── Правила для текущей страницы ────────────────────────────────────────────
 
 function renderPageRules() {
   if (!currentPageUrl) return;
   browser.runtime.sendMessage({ type: 'GET_RULES', pageUrl: currentPageUrl }).then(response => {
     const rules = response.rules || {};
     const container = document.getElementById('page-rules-list');
-    const clearBtn = document.getElementById('clear-page-btn');
-    container.innerHTML = '';
+    const clearBtn  = document.getElementById('clear-page-btn');
+    container.textContent = '';
 
     const entries = Object.entries(rules);
     if (entries.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="icon">🖼</div>
-          <p>There are no rules for this page..<br>
-          Click on any image on the page to customize the replacement.</p>
-        </div>`;
+      container.appendChild(emptyState('🖼', 'No rules for this page. Click any image on the page to set up a replacement.'));
       clearBtn.style.display = 'none';
       return;
     }
@@ -51,123 +73,102 @@ function renderPageRules() {
     clearBtn.style.display = 'block';
 
     entries.forEach(([originalSrc, replacementSrc]) => {
-      const card = document.createElement('div');
-      card.className = 'rule-card';
-
       const shortSrc = originalSrc.length > 55
         ? '...' + originalSrc.slice(-52)
         : originalSrc;
 
-      const replacementIsData = replacementSrc.startsWith('data:');
-      const replacementLabel = replacementIsData ? '[local file]' : replacementSrc;
+      // Images
+      const imgBefore = el('img', { src: originalSrc, alt: '' });
+      imgBefore.onerror = () => { imgBefore.style.opacity = '0.2'; };
 
-      card.innerHTML = `
-        <div class="rule-images">
-          <div class="rule-img-wrap">
-            <span class="rule-img-label">BEFORE</span>
-            <img src="${originalSrc}" alt="" onerror="this.style.opacity='0.2'" />
-          </div>
-          <div class="rule-img-wrap">
-            <span class="rule-img-label">AFTER</span>
-            <img src="${replacementSrc}" alt="" onerror="this.style.opacity='0.2'" />
-          </div>
-        </div>
-        <div class="rule-meta">
-          <span class="rule-src" title="${originalSrc}">${shortSrc}</span>
-          <button class="rule-del" data-src="${originalSrc}">Delete</button>
-        </div>
-      `;
+      const imgAfter = el('img', { src: replacementSrc, alt: '' });
+      imgAfter.onerror = () => { imgAfter.style.opacity = '0.2'; };
 
-      card.querySelector('.rule-del').addEventListener('click', () => {
+      const wrapBefore = el('div', { className: 'rule-img-wrap' }, [
+        el('span', { className: 'rule-img-label', textContent: 'BEFORE' }),
+        imgBefore
+      ]);
+      const wrapAfter = el('div', { className: 'rule-img-wrap' }, [
+        el('span', { className: 'rule-img-label', textContent: 'AFTER' }),
+        imgAfter
+      ]);
+      const images = el('div', { className: 'rule-images' }, [wrapBefore, wrapAfter]);
+
+      // Delete button
+      const delBtn = el('button', { className: 'rule-del', textContent: 'Delete' });
+      delBtn.addEventListener('click', () => {
         browser.runtime.sendMessage({
           type: 'DELETE_RULE',
           pageUrl: currentPageUrl,
           originalSrc
-        }).then(() => {
-          notifyTab();
-          renderPageRules();
-        });
+        }).then(() => { notifyTab(); renderPageRules(); });
       });
 
-      container.appendChild(card);
+      const meta = el('div', { className: 'rule-meta' }, [
+        el('span', { className: 'rule-src', title: originalSrc, textContent: shortSrc }),
+        delBtn
+      ]);
+
+      container.appendChild(el('div', { className: 'rule-card' }, [images, meta]));
     });
   });
 }
 
-// ─── All rules ──────────────────────────────────────────────────────────────
+// ─── Все правила ──────────────────────────────────────────────────────────────
 
 function renderAllRules() {
   browser.runtime.sendMessage({ type: 'GET_ALL_RULES' }).then(response => {
-    const allRules = response.rules || {};
+    const allRules  = response.rules || {};
     const container = document.getElementById('all-rules-list');
-    container.innerHTML = '';
+    container.textContent = '';
 
     const pages = Object.entries(allRules);
     if (pages.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="icon">📋</div>
-          <p>There is not a single rule.<br>Start by clicking on an image on any website..</p>
-        </div>`;
+      container.appendChild(emptyState('📋', 'No rules yet. Start by clicking an image on any site.'));
       return;
     }
 
     pages.forEach(([pageUrl, rules]) => {
-      const group = document.createElement('div');
-      group.className = 'page-group';
-
       const shortUrl = pageUrl.length > 50 ? '...' + pageUrl.slice(-47) : pageUrl;
 
-      let rulesHtml = '';
-      Object.entries(rules).forEach(([orig, repl]) => {
+      const pageDelBtn = el('button', { className: 'page-del', title: 'Delete all rules for this page', textContent: '🗑' });
+      pageDelBtn.addEventListener('click', () => {
+        browser.runtime.sendMessage({ type: 'DELETE_PAGE_RULES', pageUrl })
+          .then(() => { notifyTab(); renderAllRules(); });
+      });
+
+      const groupHeader = el('div', { className: 'page-group-header' }, [
+        el('span', { className: 'page-url', title: pageUrl, textContent: shortUrl }),
+        pageDelBtn
+      ]);
+
+      const ruleItems = Object.entries(rules).map(([orig, repl]) => {
         const shortOrig = orig.length > 40 ? '...' + orig.slice(-37) : orig;
         const shortRepl = repl.startsWith('data:')
           ? '[local file]'
           : (repl.length > 30 ? '...' + repl.slice(-27) : repl);
 
-        rulesHtml += `
-          <div class="mini-rule">
-            <span class="mini-rule-src" title="${orig}">${shortOrig}</span>
-            <span class="arrow">→</span>
-            <span class="mini-rule-src" title="${repl}" style="color:#aaa">${shortRepl}</span>
-            <button class="mini-rule-del" data-page="${pageUrl}" data-src="${orig}" title="Delete">✕</button>
-          </div>`;
-      });
-
-      group.innerHTML = `
-        <div class="page-group-header">
-          <span class="page-url" title="${pageUrl}">${shortUrl}</span>
-          <button class="page-del" data-page="${pageUrl}" title="Delete all page rules">🗑</button>
-        </div>
-        <div class="page-group-rules">${rulesHtml}</div>
-      `;
-
-      group.querySelector('.page-del').addEventListener('click', () => {
-        browser.runtime.sendMessage({ type: 'DELETE_PAGE_RULES', pageUrl }).then(() => {
-          notifyTab();
-          renderAllRules();
+        const miniDelBtn = el('button', { className: 'mini-rule-del', title: 'Delete', textContent: '✕' });
+        miniDelBtn.addEventListener('click', () => {
+          browser.runtime.sendMessage({ type: 'DELETE_RULE', pageUrl, originalSrc: orig })
+            .then(() => { notifyTab(); renderAllRules(); });
         });
+
+        return el('div', { className: 'mini-rule' }, [
+          el('span', { className: 'mini-rule-src', title: orig, textContent: shortOrig }),
+          el('span', { className: 'arrow', textContent: '→' }),
+          el('span', { className: 'mini-rule-src', title: repl, style: 'color:#aaa', textContent: shortRepl }),
+          miniDelBtn
+        ]);
       });
 
-      group.querySelectorAll('.mini-rule-del').forEach(btn => {
-        btn.addEventListener('click', () => {
-          browser.runtime.sendMessage({
-            type: 'DELETE_RULE',
-            pageUrl: btn.dataset.page,
-            originalSrc: btn.dataset.src
-          }).then(() => {
-            notifyTab();
-            renderAllRules();
-          });
-        });
-      });
-
-      container.appendChild(group);
+      const groupRules = el('div', { className: 'page-group-rules' }, ruleItems);
+      container.appendChild(el('div', { className: 'page-group' }, [groupHeader, groupRules]));
     });
   });
 }
 
-// ─── The "Delete all page rules" button ────────────────────────────────────
+// ─── Кнопка "удалить все правила страницы" ────────────────────────────────────
 
 document.getElementById('clear-page-btn').addEventListener('click', () => {
   if (!currentPageUrl) return;
@@ -177,12 +178,12 @@ document.getElementById('clear-page-btn').addEventListener('click', () => {
   });
 });
 
-// ─── Notify the content script of the current tab ───────────────────────────────
+// ─── Уведомляем контент-скрипт текущей вкладки ───────────────────────────────
 
 function notifyTab() {
   browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
     if (tabs[0]) {
-      browser.tabs.sendMessage(tabs[0].id, { type: 'RELOAD_RULES' }).catch(() => { });
+      browser.tabs.sendMessage(tabs[0].id, { type: 'RELOAD_RULES' }).catch(() => {});
     }
   });
 }

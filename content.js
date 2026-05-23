@@ -3,7 +3,7 @@
 const pageUrl = window.location.href;
 let activePanel = null;
 
-// ─── 1. Apply saved rules when loading ───────────────────────────
+// ─── 1. Применяем сохранённые правила при загрузке ───────────────────────────
 
 function applyRules(rules) {
   if (!rules || Object.keys(rules).length === 0) return;
@@ -49,7 +49,7 @@ browser.runtime.sendMessage({ type: 'GET_RULES', pageUrl }).then(response => {
   observeNewImages(response.rules);
 });
 
-// ─── 2. Replacement panel ─────────────────────────────────────────────────────────
+// ─── 2. Панель замены ─────────────────────────────────────────────────────────
 
 function closePanel() {
   if (activePanel) { activePanel.remove(); activePanel = null; }
@@ -59,48 +59,69 @@ function getOriginalSrc(img) {
   return img.dataset.originalSrc || img.src;
 }
 
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'className') node.className = v;
+    else if (k === 'textContent') node.textContent = v;
+    else if (k === 'title') node.title = v;
+    else if (k === 'type') node.type = v;
+    else if (k === 'placeholder') node.placeholder = v;
+    else if (k === 'accept') node.accept = v;
+    else if (k === 'id') node.id = v;
+    else if (k === 'htmlFor') node.htmlFor = v;
+    else if (k.startsWith('data-')) node.dataset[k.slice(5)] = v;
+    else node.setAttribute(k, v);
+  }
+  children.forEach(c => c && node.appendChild(
+    typeof c === 'string' ? document.createTextNode(c) : c
+  ));
+  return node;
+}
+
 function showPanelForSrc(originalSrc, anchorEl) {
   closePanel();
-
-  const panel = document.createElement('div');
-  panel.className = 'ir-panel';
 
   const shortSrc = originalSrc.length > 60
     ? '...' + originalSrc.slice(-57)
     : originalSrc;
 
-  panel.innerHTML = `
-    <div class="ir-panel-header">
-      <span class="ir-panel-title">🔄 Replace image</span>
-      <button class="ir-close">✕</button>
-    </div>
-    <div class="ir-panel-src" title="${originalSrc}">${shortSrc}</div>
-    <div class="ir-tabs">
-      <button class="ir-tab ir-tab-active" data-tab="url">By URL</button>
-      <button class="ir-tab" data-tab="file">File from device</button>
-    </div>
-    <div class="ir-tab-content" id="ir-tab-url">
-      <input class="ir-input" id="ir-url-input" type="url"
-        placeholder="https://example.com/image.jpg" />
-      <button class="ir-btn-primary" id="ir-btn-url">Apply</button>
-    </div>
-    <div class="ir-tab-content ir-hidden" id="ir-tab-file">
-      <label class="ir-file-label">
-        <input type="file" id="ir-file-input" accept="image/*" />
-        <span id="ir-file-name">Select file…</span>
-      </label>
-      <button class="ir-btn-primary" id="ir-btn-file">Apply</button>
-    </div>
-  `;
+  // Header
+  const closeBtn = el('button', { className: 'ir-close', textContent: '✕' });
+  const header = el('div', { className: 'ir-panel-header' }, [
+    el('span', { className: 'ir-panel-title', textContent: '🔄 Заменить изображение' }),
+    closeBtn
+  ]);
 
-  // Positioning
+  // Src label
+  const srcLabel = el('div', { className: 'ir-panel-src', title: originalSrc, textContent: shortSrc });
+
+  // Tabs
+  const tabUrl  = el('button', { className: 'ir-tab ir-tab-active', 'data-tab': 'url', textContent: 'По URL' });
+  const tabFile = el('button', { className: 'ir-tab', 'data-tab': 'file', textContent: 'Файл с устройства' });
+  const tabs    = el('div', { className: 'ir-tabs' }, [tabUrl, tabFile]);
+
+  // Tab: URL
+  const urlInput  = el('input', { className: 'ir-input', id: 'ir-url-input', type: 'url', placeholder: 'https://example.com/image.jpg' });
+  const urlBtn    = el('button', { className: 'ir-btn-primary', id: 'ir-btn-url', textContent: 'Применить' });
+  const tabUrlDiv = el('div', { className: 'ir-tab-content', id: 'ir-tab-url' }, [urlInput, urlBtn]);
+
+  // Tab: File
+  const fileInput   = el('input', { type: 'file', id: 'ir-file-input', accept: 'image/*' });
+  const fileName    = el('span', { id: 'ir-file-name', textContent: 'Выбрать файл…' });
+  const fileLabel   = el('label', { className: 'ir-file-label' }, [fileInput, fileName]);
+  const fileBtn     = el('button', { className: 'ir-btn-primary', id: 'ir-btn-file', textContent: 'Применить' });
+  const tabFileDiv  = el('div', { className: 'ir-tab-content ir-hidden', id: 'ir-tab-file' }, [fileLabel, fileBtn]);
+
+  const panel = el('div', { className: 'ir-panel' }, [header, srcLabel, tabs, tabUrlDiv, tabFileDiv]);
+
+  // Позиционирование
   if (anchorEl) {
     const rect = anchorEl.getBoundingClientRect();
     panel.style.position = 'absolute';
     panel.style.top = (rect.bottom + window.scrollY + 8) + 'px';
     panel.style.left = (rect.left + window.scrollX) + 'px';
   } else {
-    // Mobile - centered at the bottom of the screen
     panel.style.position = 'fixed';
     panel.style.bottom = '16px';
     panel.style.left = '50%';
@@ -110,7 +131,6 @@ function showPanelForSrc(originalSrc, anchorEl) {
   document.body.appendChild(panel);
   activePanel = panel;
 
-  // Correct if it goes beyond the right edge (only for absolute)
   if (anchorEl) {
     const pr = panel.getBoundingClientRect();
     if (pr.right > window.innerWidth - 10) {
@@ -118,30 +138,29 @@ function showPanelForSrc(originalSrc, anchorEl) {
     }
   }
 
-  // Tabs
-  panel.querySelectorAll('.ir-tab').forEach(tab => {
+  // Вкладки
+  [tabUrl, tabFile].forEach(tab => {
     tab.addEventListener('click', () => {
-      panel.querySelectorAll('.ir-tab').forEach(t => t.classList.remove('ir-tab-active'));
+      [tabUrl, tabFile].forEach(t => t.classList.remove('ir-tab-active'));
       tab.classList.add('ir-tab-active');
-      panel.querySelectorAll('.ir-tab-content').forEach(c => c.classList.add('ir-hidden'));
-      panel.querySelector(`#ir-tab-${tab.dataset.tab}`).classList.remove('ir-hidden');
+      [tabUrlDiv, tabFileDiv].forEach(c => c.classList.add('ir-hidden'));
+      (tab.dataset.tab === 'url' ? tabUrlDiv : tabFileDiv).classList.remove('ir-hidden');
     });
   });
 
-  panel.querySelector('.ir-close').addEventListener('click', closePanel);
+  closeBtn.addEventListener('click', closePanel);
 
-  panel.querySelector('#ir-file-input').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (file) panel.querySelector('#ir-file-name').textContent = file.name;
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) fileName.textContent = fileInput.files[0].name;
   });
 
-  panel.querySelector('#ir-btn-url').addEventListener('click', () => {
-    const url = panel.querySelector('#ir-url-input').value.trim();
+  urlBtn.addEventListener('click', () => {
+    const url = urlInput.value.trim();
     if (url) saveAndApply(originalSrc, url);
   });
 
-  panel.querySelector('#ir-btn-file').addEventListener('click', () => {
-    const file = panel.querySelector('#ir-file-input').files[0];
+  fileBtn.addEventListener('click', () => {
+    const file = fileInput.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = e => saveAndApply(originalSrc, e.target.result);
@@ -160,16 +179,15 @@ function saveAndApply(originalSrc, newSrc) {
   browser.runtime.sendMessage({
     type: 'SAVE_RULE', pageUrl, originalSrc, replacementSrc: newSrc
   }).then(() => {
-    showToast('✓ Replacement saved');
+    showToast('✓ Замена сохранена');
     closePanel();
   });
 }
 
-// ─── 3. Desktop: context menu → message from background.js ───────────────
+// ─── 3. Десктоп: контекстное меню → сообщение от background.js ───────────────
 
 browser.runtime.onMessage.addListener(message => {
   if (message.type === 'SHOW_PANEL_FOR') {
-    // Find the img with this src on the page
     const img = [...document.querySelectorAll('img')].find(i =>
       (i.dataset.originalSrc || i.src) === message.srcUrl
     );
@@ -187,7 +205,7 @@ browser.runtime.onMessage.addListener(message => {
   }
 });
 
-// ─── 4. Mobile: long press on the picture (500ms) ───────────────────────────────
+// ─── 4. Мобиль: long press на картинку (500мс) ───────────────────────────────
 
 let longPressTimer = null;
 let longPressMoved = false;
@@ -213,7 +231,7 @@ document.addEventListener('touchend', () => {
   clearTimeout(longPressTimer);
 }, { passive: true });
 
-// ─── 5. Close the panel by clicking outside it ─────────────────────────────────────
+// ─── 5. Закрытие панели по клику вне неё ─────────────────────────────────────
 
 document.addEventListener('click', e => {
   if (activePanel && !activePanel.contains(e.target)) closePanel();
@@ -221,8 +239,7 @@ document.addEventListener('click', e => {
 
 document.addEventListener('touchstart', e => {
   if (activePanel && !activePanel.contains(e.target)) {
-    const img = e.target.closest('img');
-    if (!img) closePanel();
+    if (!e.target.closest('img')) closePanel();
   }
 }, { passive: true });
 
